@@ -1,0 +1,11 @@
+modelscope
+fastapi
+uvicorn[standard]
+pillow
+torch
+transformers>=4.40.0
+accelerate
+qwen-vl-utils
+torchvision
+python-multipart
+peft

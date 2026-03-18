@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MDSC SMT 连接器质检系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #f5f7fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #1a73e8;
+            color: white;
+            padding: 16px 24px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .upload-section {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .result-section {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .preview-container {
+            background: white;
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview-container:hover {
+            border-color: #1a73e8;
+        }
+
+        .preview-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+            z-index: 10;
+            cursor: zoom-in;
+        }
+
+        .upload-area {
+            text-align: center;
+            padding: 40px 20px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .upload-area:hover {
+            background: #f0f4ff;
+        }
+
+        .btn {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #0d5bb8;
+        }
+
+        .btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            font-size: 64px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .good {
+            color: #28a745;
+        }
+
+        .notgood {
+            color: #dc3545;
+        }
+
+        .reason {
+            width: 100%;
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* 预览模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .modal-content {
+            position: relative;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transform: scale(1);
+            transition: transform 0.2s ease;
+            cursor: grab;
+        }
+
+        .modal-content img:active {
+            cursor: grabbing;
+        }
+
+        .modal-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            z-index: 1001;
+        }
+
+        .modal-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            backdrop-filter: blur(4px);
+            transition: all 0.2s;
+        }
+
+        .modal-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">MDSC SMT 连接器 AI 质检系统</div>
+    <div class="container">
+        <!-- 左侧：上传 & 预览 -->
+        <div class="upload-section">
+            <div class="preview-container" id="previewContainer">
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <p>📁 点击或拖拽图片上传</p>
+                    <p style="font-size: 14px; color: #999; margin-top: 10px;">(支持重新点击上传)</p>
+                </div>
+                <img id="previewImage" onclick="openPreviewModal()">
+            </div>
+            <input type="file" id="fileInput" accept="image/*">
+            <div style="display: flex; gap: 16px;">
+                <button class="btn" id="reuploadBtn" onclick="document.getElementById('fileInput').click()"
+                    style="flex: 1; background: #6c757d; display: none;">📁 上传图片</button>
+                <button class="btn" id="detectBtn" onclick="detectImage()" disabled style="flex: 2;">🔍 开始检测</button>
+            </div>
+        </div>
+
+        <!-- 右侧：结果 -->
+        <div class="result-section">
+            <div class="status" id="statusText">-</div>
+            <div class="reason" id="reasonText">请上传图片并点击“开始检测”</div>
+            <div id="durationText"
+                style="margin-top: 15px; color: #666; font-size: 14px; text-align: right; min-height: 20px;"></div>
+        </div>
+    </div>
+
+    <!-- 预览模态框 -->
+    <div class="modal" id="imageModal" onwheel="handleWheel(event)">
+        <div class="modal-controls">
+            <button class="modal-btn" onclick="zoomIn(event)">➕ 放大</button>
+            <button class="modal-btn" onclick="zoomOut(event)">➖ 缩小</button>
+            <button class="modal-btn" onclick="closePreviewModal(event)">❌ 关闭</button>
+        </div>
+        <div class="modal-content" id="modalContent">
+            <img id="modalImg" draggable="false">
+        </div>
+    </div>
+
+    <script>
+        let currentImage = null;
+        let p_scale = 1;
+        let isDragging = false;
+        let startX, startY;
+        let translateX = 0, translateY = 0;
+
+        function openPreviewModal() {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImg');
+
+            modalImg.src = document.getElementById('previewImage').src;
+            modal.style.display = 'flex';
+            p_scale = 1;
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
+        }
+
+        function closePreviewModal(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('imageModal').style.display = 'none';
+        }
+
+        function zoomIn(e) {
+            if (e) e.stopPropagation();
+            p_scale += 0.2;
+            updateTransform();
+        }
+
+        function zoomOut(e) {
+            if (e) e.stopPropagation();
+            if (p_scale > 0.4) {
+                p_scale -= 0.2;
+                updateTransform();
+            }
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+            if (e.deltaY < 0) {
+                zoomIn();
+            } else {
+                zoomOut();
+            }
+        }
+
+        function updateTransform() {
+            document.getElementById('modalImg').style.transform = `translate(${translateX}px, ${translateY}px) scale(${p_scale})`;
+        }
+
+        // 简单的拖拽实现
+        const modalImg = document.getElementById('modalImg');
+        modalImg.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
+        });
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        document.getElementById('fileInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const img = document.getElementById('previewImage');
+                    img.src = event.target.result;
+                    img.style.display = 'block';
+                    document.getElementById('uploadArea').style.display = 'none';
+
+                    currentImage = file;
+                    document.getElementById('detectBtn').disabled = false;
+                    document.getElementById('reuploadBtn').style.display = 'block';
+
+                    // Reset status text
+                    document.getElementById('statusText').textContent = '-';
+                    document.getElementById('statusText').className = 'status';
+                    document.getElementById('reasonText').textContent = '图片已就绪，请点击“开始检测”';
+                    if (document.getElementById('durationText')) document.getElementById('durationText').textContent = '';
+                };
+                reader.readAsDataURL(file);
+            }
+            // Allow selecting the same file again
+            e.target.value = '';
+        });
+
+        // 拖拽上传
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '#e6f0ff';
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.background = '';
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '';
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                document.getElementById('fileInput').files = e.dataTransfer.files;
+                const event = new Event('change');
+                document.getElementById('fileInput').dispatchEvent(event);
+            }
+        });
+
+        async function detectImage() {
+            if (!currentImage) return;
+
+            const formData = new FormData();
+            formData.append('file', currentImage);
+
+            const btn = document.getElementById('detectBtn');
+            btn.disabled = true;
+            btn.textContent = '检测中...';
+
+            document.getElementById('statusText').textContent = '⏳';
+            document.getElementById('reasonText').textContent = 'AI 正在分析中...';
+            if (document.getElementById('durationText')) document.getElementById('durationText').textContent = '⏱️ 计时中...';
+
+            try {
+                const response = await fetch('/inspect', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    const statusEl = document.getElementById('statusText');
+                    const reasonEl = document.getElementById('reasonText');
+
+                    if (data.status === 'PASS') {
+                        statusEl.textContent = 'PASS - 良品';
+                        statusEl.className = 'status good';
+                    } else if (data.status === 'FAIL') {
+                        statusEl.textContent = 'FAIL - 缺陷';
+                        statusEl.className = 'status notgood';
+                    } else {
+                        statusEl.textContent = 'UNKNOWN';
+                        statusEl.className = 'status notgood';
+                    }
+                    reasonEl.textContent = data.ai_judgment;
+                    if (document.getElementById('durationText')) {
+                        document.getElementById('durationText').textContent = `⏱️ 检测耗时: ${data.duration} 秒`;
+                    }
+                } else {
+                    throw new Error(data.detail || '未知错误');
+                }
+            } catch (error) {
+                alert('检测失败: ' + error.message);
+                document.getElementById('statusText').textContent = 'Error';
+                document.getElementById('reasonText').textContent = error.message;
+                if (document.getElementById('durationText')) document.getElementById('durationText').textContent = '';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 开始检测';
+            }
+        }
+    </script>
+</body>
+
+</html>

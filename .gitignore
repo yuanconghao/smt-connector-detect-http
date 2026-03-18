@@ -1,0 +1,46 @@
+# ========== Python ==========
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ========== environments ==========
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ========== FastAPI / Uvicorn ==========
+*.log
+
+# ========== IDEs & OS ==========
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/
+
+# ========== Machine Learning / Models ==========
+models/
+sft_models/
+saves/
+# 忽略常见的模型和权重文件格式
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.onnx
+*.pb
+
+# ========== 测试与临时文件 ==========
+run_test.py
+inspection_report_*.md
+test_dataset/
+/tmp/
